@@ -5,6 +5,7 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 def main():
     first = PoseWithCovarianceStamped()
     second = PoseWithCovarianceStamped()
+    rospy.init_node('usb_cdc')
     Sub = rospy.Subscriber('/lane_detect',String,position)
     Pub = rospy.Publisher('/usb_goal',PoseWithCovarianceStamped,queue_size=10)
     ser = serial.Serial('/dev/ttyACM0',115200)
