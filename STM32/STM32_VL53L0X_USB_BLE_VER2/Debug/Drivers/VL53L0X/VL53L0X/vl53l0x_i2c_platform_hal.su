@@ -1,0 +1,9 @@
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:7:5:VL53L0X_i2c_init	4	static
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:12:5:VL53L0X_write_multi	40	static
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:29:5:VL53L0X_read_multi	48	static
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:36:5:VL53L0X_write_byte	32	static
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:48:5:VL53L0X_write_word	32	static
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:61:5:VL53L0X_write_dword	32	static
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:77:5:VL53L0X_read_byte	40	static
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:85:5:VL53L0X_read_word	24	static
+../Drivers/VL53L0X/VL53L0X/vl53l0x_i2c_platform_hal.c:99:5:VL53L0X_read_dword	32	static
