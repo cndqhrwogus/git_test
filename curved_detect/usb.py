@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import serial
+import rospy
 from geometry_msgs.msg import PoseWithCovarianceStamped
 def main():
+    global a
     first = PoseWithCovarianceStamped()
     second = PoseWithCovarianceStamped()
     rospy.init_node('usb_cdc')
@@ -24,7 +26,9 @@ def main():
             
 
 def position(msg):
-    global a = PoseWithCovarianceStamped()
+    a = PoseWithCovarianceStamped()
     a.pose.pose.position.x = msg.pose.pose.position.x
     a.pose.pose.position.y = msg.pose.pose.position.y
-    
+
+if __name__ == '__main__':
+    main()
