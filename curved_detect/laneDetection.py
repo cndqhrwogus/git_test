@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import cv2
 import numpy as np
 import rospy
@@ -17,14 +17,14 @@ def processImage(inpImage):
     # result = cv2.bitwise_and(v,v,mask=mask)
     hls = cv2.cvtColor(inpImage,cv2.COLOR_BGR2HLS)
     gray = cv2.cvtColor(inpImage,cv2.COLOR_BGR2GRAY)
-    result = cv2.inRange(hls,(70,140,15),(110,230,70))
+    result = cv2.inRange(hls,(0,200,0),(220,255,255))
     mask = cv2.bitwise_and(result,gray)
     ret, thresh = cv2.threshold(mask,145,255,cv2.THRESH_BINARY)
     # thresh = cv2.inRange(result,210,240)
     blur = cv2.GaussianBlur(thresh,(21, 21), 0)
     canny = cv2.Canny(blur, 40, 60)
-    # cv2.imshow("1",result)
-    # cv2.imshow("1",result)
+    # cv2.imshow("1",thresh)
+    # cv2.imshow("result",hls)
     # cv2.imshow("2",hls)
     # cv2.imshow("mask",thresh)
     # cv2.imshow("2",inpImage)
@@ -44,16 +44,16 @@ def perspectiveWarp(inpImage):
     img_size = (inpImage.shape[1], inpImage.shape[0])
 
     # Perspective points to be warped (6, 240) (30 160) (255 240) (255 160)
-    src = np.float32([[6, 160],
-                      [305, 160],
-                      [6, 240],
-                      [305, 240]])
+    src = np.float32([[0, 30],
+                      [160, 30],
+                      [0, 62],
+                      [160, 62]])
 
     # Window to be shown
     dst = np.float32([[0, 0],
-                      [320, 0],
-                      [0, 240],
-                      [320, 240]])
+                      [160, 0],
+                      [0, 120],
+                      [160, 120]])
 
     # Matrix to warp the image for birdseye window
     matrix = cv2.getPerspectiveTransform(src, dst)
@@ -85,7 +85,7 @@ def plotHistogram(inpImage):
 
     histogram = np.sum(inpImage[inpImage.shape[0] // 2:, :], axis = 0)
 
-    midpoint = np.int(histogram.shape[0] / 2)
+    midpoint = np.int_(histogram.shape[0] / 2)
     leftxBase = np.argmax(histogram[:midpoint])
     rightxBase = np.argmax(histogram[midpoint:]) + midpoint
     # plt.xlabel("Image X Coordinates")
@@ -106,13 +106,13 @@ def slide_window_search(binary_warped, histogram):
     try:
     # Find the start of left and right lane lines using histogram info
         out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
-        midpoint = np.int(histogram.shape[0] / 2)
+        midpoint = np.int_(histogram.shape[0] / 2)
         leftx_base = np.argmax(histogram[:midpoint])
         rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
         # A total of 9 windows will be used
         nwindows = 6
-        window_height = np.int(binary_warped.shape[0] / nwindows)
+        window_height = np.int_(binary_warped.shape[0] / nwindows)
         nonzero = binary_warped.nonzero()
         nonzeroy = np.array(nonzero[0])
         nonzerox = np.array(nonzero[1])
@@ -122,10 +122,10 @@ def slide_window_search(binary_warped, histogram):
         minpix = 50
         left_lane_inds = []
         right_lane_inds = []
-        if ((np.sum(histogram[85:205]) < (np.sum(histogram[:72])+np.sum(histogram[248:]))) and (3000000>(np.sum(histogram[:72])+np.sum(histogram[248:]))>800000)):
-            # print("1",np.sum(histogram[:72]))
-            # print("2",np.sum(histogram[248:]))
-            # print("3",np.sum(histogram[85:205]))
+        print("1",np.sum(histogram[:52]))
+        print("2",np.sum(histogram[100:]))
+        print("3",np.sum(histogram[60:90]))
+        if ((np.sum(histogram[60:90]) < (np.sum(histogram[:52])+np.sum(histogram[100:]))) and (2000000>(np.sum(histogram[:52])+np.sum(histogram[100:]))>800000)):
             for window in range(nwindows):
                 win_y_low = binary_warped.shape[0] - (window + 1) * window_height
                 win_y_high = binary_warped.shape[0] - window * window_height
@@ -140,9 +140,9 @@ def slide_window_search(binary_warped, histogram):
                 left_lane_inds.append(good_left_inds)
                 right_lane_inds.append(good_right_inds)
                 if len(good_left_inds) > minpix:
-                    leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
+                    leftx_current = np.int_(np.mean(nonzerox[good_left_inds]))
                 if len(good_right_inds) > minpix:
-                    rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
+                    rightx_current = np.int_(np.mean(nonzerox[good_right_inds]))
 
             left_lane_inds = np.concatenate(left_lane_inds)
             right_lane_inds = np.concatenate(right_lane_inds)
@@ -194,17 +194,20 @@ def general_search(binary_warped, left_fit, right_fit):
     right_lane_inds = ((nonzerox > (right_fit[0]*(nonzeroy**2) + right_fit[1]*nonzeroy +
     right_fit[2] - margin)) & (nonzerox < (right_fit[0]*(nonzeroy**2) +
     right_fit[1]*nonzeroy + right_fit[2] + margin)))
+    # print(left_lane_inds)
+    # print(right_lane_inds)
 
     leftx = nonzerox[left_lane_inds]
     lefty = nonzeroy[left_lane_inds]
     rightx = nonzerox[right_lane_inds]
     righty = nonzeroy[right_lane_inds]
+    
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
     ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0])
     left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
     right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
-
+    
 
     ## VISUALIZATION ###########################################################
 
@@ -266,9 +269,9 @@ def measure_lane_curvature(ploty, leftx, rightx):
     # Now our radius of curvature is in meters
     # print(left_curverad, 'm', right_curverad, 'm')
     # Decide if it is a left or a right curve
-    if rightx[0] - rightx[-1] >= 8:
+    if rightx[0] - rightx[-1] >= 20:
         curve_direction = 'Left Curve'
-    elif rightx[-1] - rightx[0] >= 8:
+    elif rightx[-1] - rightx[0] >= 20:
         curve_direction = 'Right Curve'
     else:
         curve_direction = 'Straight'
@@ -329,97 +332,107 @@ def offCenter(meanPts, inpFrame):
 def addText(img,direction):
     font = cv2.FONT_HERSHEY_TRIPLEX
     cv2.putText(img,direction,(4,20),font,0.5,(0,255,0),1,cv2.LINE_AA)
-    try:
-        cv2.putText(img,sonar_range,(4,40),font,0.5,(0,255,0),1,cv2.LINE_AA)
-    except NameError:
-        print('sonar not detecting')
+    # try:
+    #     cv2.putText(img,sonar_range,(4,40),font,0.5,(0,255,0),1,cv2.LINE_AA)
+    # except NameError:
+    #     print('sonar not detecting')
     return img
 
 
-def sonar_callback(data):
-    global sonar_range
-    sonar_range = data.data
+# def sonar_callback(data):
+#     global sonar_range
+#     sonar_range = data.data
     
 
 
-image = cv2.VideoCapture(0)
-image.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
+image = cv2.VideoCapture('/dev/video0')
+image.set(cv2.CAP_PROP_FRAME_WIDTH,160)
+image.set(cv2.CAP_PROP_FRAME_HEIGHT,120)
+image.set(cv2.CAP_PROP_FPS, 20)
+# image.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
 # image.set(cv2.CAP_PROP_FRAME_WIDTH,1280)
 # image.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
 bridge = CvBridge()
 pub = rospy.Publisher('lane_detect',String,queue_size=10)
 rospy.init_node('cam_detect')
-sonar_sub = rospy.Subscriber('/sonar_range',String,sonar_callback)
+# sonar_sub = rospy.Subscriber('/sonar_range',String,sonar_callback)
 ################################################################################
 #### START - LOOP TO PLAY THE INPUT IMAGE ######################################
 while True:
     _, frame = image.read()
-    frame = cv2.resize(frame,(320,240),cv2.INTER_AREA)
-    # Apply perspective warping by calling the "perspectiveWarp()" function
-    # Then assign it to the variable called (birdView)
-    # Provide this function with:
-    # 1- an image to apply perspective warping (frame)
-    birdView, birdViewL, birdViewR, minverse = perspectiveWarp(frame)
-
-    # Apply image processing by calling the "processImage()" function
-    # Then assign their respective variables (img, hls, grayscale, thresh, blur, canny)
-    # Provide this function with:
-    # 1- an already perspective warped image to process (birdView)
-    thresh,canny = processImage(birdView)
-    #imgL, hlsL, grayscaleL, threshL, blurL, cannyL = processImage(birdViewL)
-    #imgR, hlsR, grayscaleR, threshR, blurR, cannyR = processImage(birdViewR)
-
-    # cv2.imshow("asd",thresh)
-    # Plot and display the histogram by calling the "get_histogram()" function
-    # Provide this function with:
-    # 1- an image to calculate histogram on (thresh)
-
-    hist, leftBase, rightBase = plotHistogram(thresh)
-    # print(rightBase - leftBase)
-    #plt.plot(hist)
-    # plt.show()
-    try:
-        ploty, left_fit, right_fit, left_fitx, right_fitx = slide_window_search(thresh, hist)
-    
-        # plt.plot(left_fit)
-        # plt.show()
-        draw_info = general_search(canny, left_fit, right_fit)
+    if frame is not None:
+        # cv2.imshow('camera',frame)
+        # frame = cv2.resize(frame,(320,240),cv2.INTER_AREA)
+        # Apply perspective warping by calling the "perspectiveWarp()" function
+        # Then assign it to the variable called (birdView)
+        # Provide this function with:
+        # 1- an image to apply perspective warping (frame)
+        birdView, birdViewL, birdViewR, minverse = perspectiveWarp(frame)
         
-        # plt.show()
-        curveRad, curveDir = measure_lane_curvature(ploty, left_fitx, right_fitx)
-
-
-        # Filling the area of detected lanes with green
-        meanPts, result = draw_lane_lines(frame, thresh, minverse, draw_info)
-
+        # Apply image processing by calling the "processImage()" function
+        # Then assign their respective variables (img, hls, grayscale, thresh, blur, canny)
+        # Provide this function with:
+        # 1- an already perspective warped image to process (birdView)
+        thresh,canny = processImage(birdView)
         
-        deviation, directionDev = offCenter(meanPts, frame)
-        if sonar_range != 'safy':
-            curveDir = 'Emergency'
+        #imgL, hlsL, grayscaleL, threshL, blurL, cannyL = processImage(birdViewL)
+        #imgR, hlsR, grayscaleR, threshR, blurR, cannyR = processImage(birdViewR)
+
+        # cv2.imshow("asd",thresh)
+        # Plot and display the histogram by calling the "get_histogram()" function
+        # Provide this function with:
+        # 1- an image to calculate histogram on (thresh)
+
+        hist, leftBase, rightBase = plotHistogram(thresh)
+        # print(rightBase - leftBase)
+        # plt.plot(hist)
+        # plt.show()
+        try:
+            ploty, left_fit, right_fit, left_fitx, right_fitx = slide_window_search(thresh, hist)
+            
+            # plt.plot(left_fit)
+            # plt.show()
+            # cv2.imshow('canny',canny)
+            draw_info = general_search(canny, left_fit, right_fit)
+           
+            # plt.show()
+            curveRad, curveDir = measure_lane_curvature(ploty, left_fitx, right_fitx)
+           
+
+            # Filling the area of detected lanes with green
+            meanPts, result = draw_lane_lines(frame, thresh, minverse, draw_info)
+         
+            
+            deviation, directionDev = offCenter(meanPts, frame)
+           
+            # if sonar_range != 'safy':
+            #     curveDir = 'Emergency'
             pub.publish(curveDir)
-        else:
-            pub.publish(curveDir)
-        # print(deviation)
-        # Adding text to our final image
-        finalImg = addText(result,curveDir)
-        # Displaying final image
-        cv2.imshow("Final", finalImg)
-    except TypeError:
-        if (np.sum(hist[:160]) > 3*np.sum(hist[160:])) and (800000<np.sum(hist)<2000000):
-            curveDir = 'only left'
-        elif (3*np.sum(hist[:160]) <  np.sum(hist[160:])) and (800000<np.sum(hist)<2000000):
-            curveDir = 'only right'
-        else:
-            curveDir = 'no line'
-        finalImg = addText(frame,curveDir)
-        cv2.imshow("Final",finalImg)
-        if sonar_range != 'safy':
-            curveDir = 'Emergency'
-            pub.publish(curveDir)
-        else:
-            pub.publish(curveDir)
-    if cv2.waitKey(30) & 0xFF == ord('c'):
-            break
+            # else:
+            #     pub.publish(curveDir)
+            # print(deviation)
+            # Adding text to our final image
+            finalImg = addText(result,curveDir)
+            # Displaying final image
+            cv2.imshow("Final", finalImg)
+        except TypeError:
+            if (np.sum(hist[:160]) > 3*np.sum(hist[160:])) and (800000<np.sum(hist)<5500000):
+                curveDir = 'only left'
+            elif (3*np.sum(hist[:160]) <  np.sum(hist[160:])) and (800000<np.sum(hist)<5500000):
+                curveDir = 'only right'
+            else:
+                curveDir = 'straight'
+            print('type error')
+            finalImg = addText(frame,curveDir)
+            # cv2.imshow("first",birdView)
+            # cv2.imshow("Final",finalImg)
+            # if sonar_range != 'safy':
+            #     curveDir = 'Emergency'
+            #     pub.publish(curveDir)
+            # else:
+            #     pub.publish(curveDir)
+        if cv2.waitKey(30) & 0xFF == ord('c'):
+                break
 
     # Wait for the ENTER key to be pressed to stop playback
 
