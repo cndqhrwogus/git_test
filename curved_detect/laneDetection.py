@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import rospy
 import time
-from matplotlib import pyplot as plt , cm, colors
+from matplotlib import pyplot as plt
 from std_msgs.msg import String, Float32
 from cv_bridge import CvBridge
 
@@ -15,19 +15,20 @@ def processImage(inpImage):
     # yuv = cv2.cvtColor(inpImage,cv2.COLOR_BGR2CMY)
     # y,u,v1 = cv2.split(yuv)
     # result = cv2.bitwise_and(v,v,mask=mask)
-    hls = cv2.cvtColor(inpImage,cv2.COLOR_BGR2HLS)
+    hsv = cv2.cvtColor(inpImage,cv2.COLOR_BGR2HSV)
     gray = cv2.cvtColor(inpImage,cv2.COLOR_BGR2GRAY)
-    result = cv2.inRange(hls,(0,200,0),(220,255,255))
+    result = cv2.inRange(hsv,(10,0,100),(70,100,255))
     mask = cv2.bitwise_and(result,gray)
-    ret, thresh = cv2.threshold(mask,145,255,cv2.THRESH_BINARY)
+    ret, thresh = cv2.threshold(mask,100,255,cv2.THRESH_BINARY)
     # thresh = cv2.inRange(result,210,240)
     blur = cv2.GaussianBlur(thresh,(21, 21), 0)
     canny = cv2.Canny(blur, 40, 60)
-    # cv2.imshow("1",thresh)
-    # cv2.imshow("result",hls)
-    # cv2.imshow("2",hls)
-    # cv2.imshow("mask",thresh)
-    # cv2.imshow("2",inpImage)
+    # cv2.imshow("4",inpImage)
+    # cv2.imshow("1",hsv)
+    # cv2.imshow("result",result)
+    # cv2.imshow("2",thresh)
+    # cv2.imshow("mask",mask)
+    # cv2.imshow("3",gray)
     # Display the processed images
 
     return thresh, canny
@@ -44,10 +45,10 @@ def perspectiveWarp(inpImage):
     img_size = (inpImage.shape[1], inpImage.shape[0])
 
     # Perspective points to be warped (6, 240) (30 160) (255 240) (255 160)
-    src = np.float32([[0, 30],
-                      [160, 30],
-                      [0, 62],
-                      [160, 62]])
+    src = np.float32([[0, 50],
+                      [160, 50],
+                      [0, 66],
+                      [160, 66]])
 
     # Window to be shown
     dst = np.float32([[0, 0],
@@ -82,16 +83,15 @@ def perspectiveWarp(inpImage):
 ################################################################################
 #### START - FUNCTION TO PLOT THE HISTOGRAM OF WARPED IMAGE ####################
 def plotHistogram(inpImage):
-
     histogram = np.sum(inpImage[inpImage.shape[0] // 2:, :], axis = 0)
 
     midpoint = np.int_(histogram.shape[0] / 2)
     leftxBase = np.argmax(histogram[:midpoint])
     rightxBase = np.argmax(histogram[midpoint:]) + midpoint
-    # plt.xlabel("Image X Coordinates")
-    # plt.ylabel("Number of White Pixels")
+    # plt.xlim(0,160)
+    # plt.ylim(0,120)
     # plt.plot(histogram)
-    # plt.show()
+    # plt.savefig("mygraph.png")
     #Return histogram and x-coordinates of left & right lanes to calculate
     #lane width in pixels
     return histogram, leftxBase, rightxBase
@@ -118,14 +118,15 @@ def slide_window_search(binary_warped, histogram):
         nonzerox = np.array(nonzero[1])
         leftx_current = leftx_base
         rightx_current = rightx_base
-        margin = 40
-        minpix = 50
+        margin = 20
+        minpix = 20
         left_lane_inds = []
         right_lane_inds = []
-        print("1",np.sum(histogram[:52]))
-        print("2",np.sum(histogram[100:]))
-        print("3",np.sum(histogram[60:90]))
-        if ((np.sum(histogram[60:90]) < (np.sum(histogram[:52])+np.sum(histogram[100:]))) and (2000000>(np.sum(histogram[:52])+np.sum(histogram[100:]))>800000)):
+        
+        # print("1",np.sum(histogram[:60]))
+        # print("2",np.sum(histogram[105:]))
+        # print("3",np.sum(histogram[60:105]))
+        if(not((np.sum(histogram[:60]) >= 1.5 * np.sum(histogram[105:])) or (1.5*np.sum(histogram[:60])<=np.sum(histogram[105:])))):
             for window in range(nwindows):
                 win_y_low = binary_warped.shape[0] - (window + 1) * window_height
                 win_y_high = binary_warped.shape[0] - window * window_height
@@ -168,8 +169,10 @@ def slide_window_search(binary_warped, histogram):
             # plt.imshow(out_img)
             # plt.plot(left_fitx,  ploty, color = 'yellow')
             # plt.plot(right_fitx, ploty, color = 'yellow')
-            # plt.xlim(0, 320)
-            # plt.ylim(240, 0)
+            # plt.plot(out_img)
+            # plt.xlim(0, 160)
+            # plt.ylim(0, 120)
+            # plt.savefig("mygraph.png")
             # plt.imshow(out_img)
             # plt.show()
             return ploty, left_fit, right_fit, ltx, rtx
@@ -202,6 +205,7 @@ def general_search(binary_warped, left_fit, right_fit):
     rightx = nonzerox[right_lane_inds]
     righty = nonzeroy[right_lane_inds]
     
+
     left_fit = np.polyfit(lefty, leftx, 2)
     right_fit = np.polyfit(righty, rightx, 2)
     ploty = np.linspace(0, binary_warped.shape[0]-1, binary_warped.shape[0])
@@ -231,8 +235,9 @@ def general_search(binary_warped, left_fit, right_fit):
     # plt.imshow(result)
     # plt.plot(left_fitx,  ploty, color = 'yellow')
     # plt.plot(right_fitx, ploty, color = 'yellow')
-    # plt.xlim(0, 320)
-    # plt.ylim(240, 0)
+    # plt.xlim(0, 160)
+    # plt.ylim(0,120)
+    # plt.savefig("mygraph.png")
 
     ret = {}
     ret['leftx'] = leftx
@@ -269,9 +274,11 @@ def measure_lane_curvature(ploty, leftx, rightx):
     # Now our radius of curvature is in meters
     # print(left_curverad, 'm', right_curverad, 'm')
     # Decide if it is a left or a right curve
-    if rightx[0] - rightx[-1] >= 20:
+    # print('1',rightx[0]-rightx[-1])
+    # print('2',rightx[-1]-rightx[0])
+    if rightx[0] - rightx[-1] >= 12:
         curve_direction = 'Left Curve'
-    elif rightx[-1] - rightx[0] >= 20:
+    elif rightx[-1] - rightx[0] >= 12:
         curve_direction = 'Right Curve'
     else:
         curve_direction = 'Straight'
@@ -348,8 +355,8 @@ def addText(img,direction):
 image = cv2.VideoCapture('/dev/video0')
 image.set(cv2.CAP_PROP_FRAME_WIDTH,160)
 image.set(cv2.CAP_PROP_FRAME_HEIGHT,120)
-image.set(cv2.CAP_PROP_FPS, 20)
-# image.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
+image.set(cv2.CAP_PROP_FPS, 10)
+image.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
 # image.set(cv2.CAP_PROP_FRAME_WIDTH,1280)
 # image.set(cv2.CAP_PROP_FRAME_HEIGHT,720)
 bridge = CvBridge()
@@ -385,6 +392,7 @@ while True:
 
         hist, leftBase, rightBase = plotHistogram(thresh)
         # print(rightBase - leftBase)
+        # plt.imshow("1",hist)
         # plt.plot(hist)
         # plt.show()
         try:
@@ -416,21 +424,24 @@ while True:
             # Displaying final image
             cv2.imshow("Final", finalImg)
         except TypeError:
-            if (np.sum(hist[:160]) > 3*np.sum(hist[160:])) and (800000<np.sum(hist)<5500000):
-                curveDir = 'only left'
-            elif (3*np.sum(hist[:160]) <  np.sum(hist[160:])) and (800000<np.sum(hist)<5500000):
-                curveDir = 'only right'
+            # if(np.sum(hist[60:95]))
+            # print("1",np.sum(hist[:75]))
+            # print("1",np.sum(hist[75:]))
+            if (1.5*np.sum(hist[:60]) <= np.sum(hist[105:])):
+                curveDir = 'Right Slide'
+            elif (np.sum(hist[:60]) >= 1.5*np.sum(hist[105:])):
+                curveDir = 'Left Slide'
             else:
-                curveDir = 'straight'
+                curveDir = 'error'
             print('type error')
             finalImg = addText(frame,curveDir)
             # cv2.imshow("first",birdView)
-            # cv2.imshow("Final",finalImg)
+            cv2.imshow("Final",finalImg)
             # if sonar_range != 'safy':
             #     curveDir = 'Emergency'
             #     pub.publish(curveDir)
             # else:
-            #     pub.publish(curveDir)
+            pub.publish(curveDir)
         if cv2.waitKey(30) & 0xFF == ord('c'):
                 break
 
