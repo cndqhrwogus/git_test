@@ -27,6 +27,8 @@
 #include "usbd_cdc_if.h"
 #include <stdio.h>
 #include <strings.h>
+extern UART_HandleTypeDef huart1;
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,6 +39,7 @@ typedef struct{
 
 /* USER CODE BEGIN PTD */
 char buf[64];
+char buf1[64];
 /* USER CODE END PTD */
 
 /* Private defines -----------------------------------------------------------*/
@@ -149,7 +152,7 @@ static SVCCTL_EvtAckStatus_t Custom_STM_Event_Handler(void *Event)
             return_value = SVCCTL_EvtAckFlowEnable;
             /* USER CODE BEGIN CUSTOM_STM_Service_1_Char_1_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */
             if(attribute_modified->Attr_Data[0]>=0x30 && attribute_modified->Attr_Data[0]<=0x39){
-            	sprintf(buf,"%d \n\r", attribute_modified->Attr_Data[0]-0x30);
+            	sprintf(buf,"%d", attribute_modified->Attr_Data[0]-0x30);
             	CDC_Transmit_FS((uint8_t *)buf,sizeof(buf));
             }
             /* USER CODE END CUSTOM_STM_Service_1_Char_1_ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE */

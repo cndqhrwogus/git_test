@@ -59,24 +59,25 @@ UART_HandleTypeDef huart1;
 void SystemClock_Config(void);
 void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_I2C1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_IPCC_Init(void);
 static void MX_RF_Init(void);
 static void MX_RTC_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+int count = 0;
 int flag = 10;
 VL53L0X_RangingMeasurementData_t RangingMeasurementData;
 VL53L0X_Dev_t		dev;
 VL53L0X_DEV			Dev = &dev;
 char ary[50];
 int sensor = 0;
-uint16_t stop = 500;
+uint16_t stop = 10000;
 void print_pal_error(VL53L0X_Error Status){
     char buf[VL53L0X_MAX_STRING_LENGTH];
     VL53L0X_GetPalErrorString(Status, buf);
@@ -86,6 +87,7 @@ void print_pal_error(VL53L0X_Error Status){
 
 VL53L0X_Error rangingTest(VL53L0X_Dev_t *pMyDevice)
 {
+
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     VL53L0X_RangingMeasurementData_t    RangingMeasurementData;
     int i;
@@ -94,9 +96,7 @@ VL53L0X_Error rangingTest(VL53L0X_Dev_t *pMyDevice)
     uint8_t isApertureSpads;
     uint8_t VhvSettings;
     uint8_t PhaseCal;
-    uint8_t left[] = "left\n\r";
-    uint8_t center[] = "center\n\r";
-    uint8_t right[] = "right\n\r";
+
     if(Status == VL53L0X_ERROR_NONE)
     {
 //        sprintf (ary,"Call of VL53L0X_StaticInit\n");
@@ -176,24 +176,12 @@ VL53L0X_Error rangingTest(VL53L0X_Dev_t *pMyDevice)
 
 //            if (Status != VL53L0X_ERROR_NONE) break;
 
-            sprintf(ary,"distance: %i\n\r",RangingMeasurementData.RangeMilliMeter);
+            sprintf(ary,"distance: %icm\n\r",RangingMeasurementData.RangeMilliMeter/1000);
             HAL_UART_Transmit(&huart1, ary, strlen((char*)ary), 10);
-            if(sensor == 1){
                         	if(RangingMeasurementData.RangeMilliMeter < stop){
-                        	CDC_Transmit_FS(left, sizeof(left));
+                        		sensor = 1;
                         }
-            }
-                        if(sensor == 2){
-                                    	if(RangingMeasurementData.RangeMilliMeter < stop){
-                                    		CDC_Transmit_FS(center, sizeof(center));
-                                    }
-                        }
-                        if(sensor == 3){
-                                         if(RangingMeasurementData.RangeMilliMeter < stop){
-                                                		CDC_Transmit_FS(right, sizeof(right));
-                                                }
-}
-                        }
+    }
     return Status;
 }
 void print_range_status(VL53L0X_RangingMeasurementData_t* pRangingMeasurementData){ //범위 ?��?�� 문자?�� ?��출함?��
@@ -220,6 +208,8 @@ void print_range_status(VL53L0X_RangingMeasurementData_t* pRangingMeasurementDat
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+	uint8_t emergency[] = "p";
+	uint8_t safy[] = "y";
 	VL53L0X_Error Status = VL53L0X_ERROR_NONE;
 			VL53L0X_Dev_t MyDevice;
 			VL53L0X_Dev_t *pMyDevice = &MyDevice;
@@ -252,11 +242,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_I2C1_Init();
   MX_USB_Device_Init();
   MX_USART1_UART_Init();
   MX_RF_Init();
   MX_RTC_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   pMyDevice->I2cDevAddr      = 0x52;
      pMyDevice->comms_type      =  1;
@@ -273,7 +263,7 @@ int main(void)
    #endif
        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, 0);
        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, 0);
-       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, 0);
+//       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, 0);
   /* USER CODE END 2 */
 
   /* Init code for STM32_WPAN */
@@ -292,29 +282,31 @@ int main(void)
    	  		  	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, 1);
    	  		  	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, 0);
    	  		  	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, 0);
-   	  		  	  sensor = 1;
-   	  		  	  sprintf(ary,"sensor ");
+   	  		  	  sprintf(ary,"left sensor ");
    	  		  	  HAL_UART_Transmit(&huart1, ary, strlen((char *)ary), 10);
    	  	          Status = rangingTest(pMyDevice);
-   	  	          HAL_Delay(1);
 
    	  	          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, 0);
    	  	          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, 1);
    	  	          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, 0);
-   	  	          sensor = 2;
-   	  	          sprintf(ary,"sensor1 ");
+   	  	          sprintf(ary,"center sensor ");
    	  	          HAL_UART_Transmit(&huart1, ary, strlen((char *)ary), 10);
    	  	          Status = rangingTest(pMyDevice);
-   	  	          HAL_Delay(1);
 
    	  	          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, 0);
    	  	          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, 0);
    	  	          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, 1);
-   	  			  sensor = 3;
-   	  			  sprintf(ary,"sensor2 ");
+   	  			  sprintf(ary,"right sensor ");
    	  			  HAL_UART_Transmit(&huart1, ary, strlen((char *)ary), 10);
    	  			  Status = rangingTest(pMyDevice);
-   	  			  HAL_Delay(1);
+
+   	  			  if(sensor == 1){
+   	  				CDC_Transmit_FS(emergency, sizeof(emergency));
+   	  			  }
+   	  			  else if(sensor == 0){
+   	  				CDC_Transmit_FS(safy, sizeof(safy));
+   	  			  }
+   	  			  sensor = 0;
    	  	      }
 //    if(flag != 10){
 //    	uint8_t Buf = flag-0x30;
@@ -621,7 +613,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LD2_Pin LD3_Pin LD1_Pin */
